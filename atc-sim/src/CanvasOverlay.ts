@@ -14,6 +14,14 @@ interface AcData {
 export function CanvasOverlay({ points }: { points: AcData[] }) {
     const map = useMap();
     const canvasRef = useRef<HTMLCanvasElement>();
+    const ptsRef = useRef<AcData[]>([]);
+    const drawRef = useRef<() => void>();
+    useEffect(() => {
+        ptsRef.current = points;
+        if (drawRef.current) {
+            drawRef.current();
+        }
+    }, [points]);
 
     useEffect(() => {
         // 1) Create & append a full-screen canvas in the overlay pane
@@ -46,16 +54,19 @@ export function CanvasOverlay({ points }: { points: AcData[] }) {
             const zoom    = map.getZoom();
             const basePx  = 5;
             const scale   = Math.pow(2, zoom / 4);
+            const perp   = Math.PI / 2;
 
-            for (const pt of points) {
+            for (const pt of ptsRef.current) {
                 // compute pixel coords relative to the NW corner
                 const origin = map.latLngToLayerPoint([pt.lat, pt.lon])
                     .subtract(topLeft);
+
+                const sizePx = basePx * scale;
+                const rad    = (pt.trk * Math.PI) / 180;
                 ctx.save();
                 // draw arrow
                 ctx.translate(origin.x, origin.y);
-                ctx.rotate((pt.trk * Math.PI) / 180);
-                const sizePx = basePx * scale;
+                ctx.rotate(rad);
                 ctx.beginPath();
                 ctx.moveTo(0, -sizePx);                        // tip
                 ctx.lineTo(-sizePx * 0.4,  sizePx * 0.4);      // left
@@ -81,6 +92,7 @@ export function CanvasOverlay({ points }: { points: AcData[] }) {
                 );
             }
         };
+        drawRef.current = draw;
 
         // 3) Redraw on pan, zoom, or resize
         map.on('move zoomend resize', draw);
@@ -92,7 +104,7 @@ export function CanvasOverlay({ points }: { points: AcData[] }) {
             map.off('move zoomend resize', draw);
             map.getPanes().overlayPane.removeChild(canvas);
         };
-    }, [map, points]);
+    }, [map]);
 
     return null;
 }

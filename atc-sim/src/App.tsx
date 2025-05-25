@@ -2,12 +2,15 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from '@tauri-apps/api/event';
 import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Popup, useMapEvent } from 'react-leaflet';
+import React, { useEffect, useState, useRef } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvent } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { CanvasArrows } from './CanvasArrow';
+import { createRoot, Root } from 'react-dom/client';
+import L from 'leaflet';
 import { CanvasOverlay } from './CanvasOverlay';
+import {PopupManager} from "./PopupManager.tsx";
+
 interface AcData {
     id:   string;
     lat:  number;
@@ -89,6 +92,7 @@ function App() {
         });
         return null;
     }
+
     const center: LatLngExpression = lastCenter[0] === 0 && lastCenter[1] === 0
         ? [53.4267, 6.2808]  // default view
         : lastCenter;
@@ -100,6 +104,7 @@ function App() {
             zoom={13}
             style={{ height: '100vh', width: '100%' }}
         >
+
             <TileLayer
                 attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
                 url="https://tile.openstreetmap.de/{z}/{x}/{y}.png"
@@ -107,35 +112,7 @@ function App() {
             <CanvasOverlay points={points} />
 
             <ClickHandler />
-            {selected && (
-                <Popup
-                     key={selected.id}               // keeps React from remounting it on points updates
-                     position={[selected.lat, selected.lon]}
-                     onClose={() => setSelected(null)}
-                     // Leaflet options to keep it open through pans/zooms/map redraws:
-                     autoClose={false}
-                     closeOnClick={false}
-                     autoPan={false}
-                >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <strong>{selected.id}</strong>
-                        <button
-                            onClick={async () => {
-                                // example Tauri invoke
-                                const resp: string = await window.__TAURI__.invoke('greet', {
-                                    name: selected.id,
-                                });
-                                console.log(resp);
-                            }}
-                        >
-                            Say Hello
-                        </button>
-                        <button onClick={() => alert(`Action for ${selected.id}`)}>
-                            Other Action
-                        </button>
-                    </div>
-                </Popup>
-            )}
+            <PopupManager selected={selected} />
         </MapContainer>
     );
 }
