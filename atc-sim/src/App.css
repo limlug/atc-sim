@@ -114,3 +114,20 @@ button {
     background-color: #0f0f0f69;
   }
 }
+.arrow-marker {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 16px solid lawngreen;  /* arrow color */
+  /* anchor the “tip” at (8px,0) inside the 16×16 box */
+  transform-origin: 8px 0;
+}
+.leaflet-tooltip.id-label {
+  background: rgba(255,255,255,0.4);
+  border: 1px solid #666;
+  padding: 2px 4px;
+  font-size: 0.8rem;
+  color: #333;
+  white-space: nowrap;
+}
