@@ -1,15 +1,13 @@
-import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 import { listen } from '@tauri-apps/api/event';
-import { warn, debug, trace, info, error } from '@tauri-apps/plugin-log';
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, useMap, useMapEvent } from 'react-leaflet';
-import type { LatLngExpression } from 'leaflet';
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, useMapEvent } from 'react-leaflet';
+import type {LatLngExpression, LeafletMouseEvent} from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { createRoot, Root } from 'react-dom/client';
 import L from 'leaflet';
 import { CanvasOverlay } from './CanvasOverlay';
 import {PopupManager} from "./PopupManager.tsx";
+import { invoke } from "@tauri-apps/api/core";
 
 interface AcData {
     id:   string;
@@ -19,10 +17,17 @@ interface AcData {
     trk:  number;
 }
 
+interface NavPoint {
+    id:   string;
+    lat:  number;
+    lon:  number;
+    name: string;
+}
 function App() {
   //const [greetMsg, setGreetMsg] = useState("");
   //const [name, setName] = useState("");
   const [points, setPoints] = useState<AcData[]>([]);
+  const [navPoints, setNavPoints] = useState<NavPoint[]>([]);
   const [lastCenter] = useState<[number, number]>([0, 0]);
   const [selected, setSelected] = useState<AcData | null>(null);
   //async function greet() {
@@ -30,6 +35,14 @@ function App() {
   //  setGreetMsg(await invoke("greet", { name }));
   //}
     useEffect(() => {
+        (async () => {
+            try {
+                const np: NavPoint[] = await invoke('get_nav_points');
+                setNavPoints(np);
+            } catch (err) {
+                console.error('Failed to load nav points:', err);
+            }
+        })();
         // listen for “acdata” events from Tauri
         let unlisten: () => void;
         (async () => {
@@ -45,7 +58,7 @@ function App() {
 
     // 2. Install click handler on the map
     function ClickHandler() {
-        useMapEvent('click', (e) => {
+        useMapEvent('click', (e: LeafletMouseEvent) => {
             const map = e.target as L.Map;
             const clickPt = map.latLngToContainerPoint(e.latlng);
 
@@ -109,7 +122,7 @@ function App() {
                 attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
                 url="https://tile.openstreetmap.de/{z}/{x}/{y}.png"
             />
-            <CanvasOverlay points={points} />
+            <CanvasOverlay points={points} navPoints={navPoints}/>
 
             <ClickHandler />
             <PopupManager selected={selected} />

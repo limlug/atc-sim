@@ -131,3 +131,19 @@ button {
   color: #333;
   white-space: nowrap;
 }
+/* Remove Leaflet’s built-in padding/margins on our popup */
+.control-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  margin: 0;
+  background: transparent;   /* so your own <div> handles it */
+  box-shadow: none;          /* optional, if you prefer */
+}
+
+.control-popup .leaflet-popup-tip-container {
+  display: none;             /* hide the little arrow “pointer” */
+}
+
+.control-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+}

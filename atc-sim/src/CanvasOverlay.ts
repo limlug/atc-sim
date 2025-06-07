@@ -1,5 +1,5 @@
 // CanvasOverlay.tsx
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -10,18 +10,29 @@ interface AcData {
     alt:       number;
     trk:       number;  // degrees, 0 = north/up
 }
+interface NavPoint {
+    id:   string;
+    lat:  number;
+    lon:  number;
+    name: string;
+}
 
-export function CanvasOverlay({ points }: { points: AcData[] }) {
+export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoints: NavPoint[]; }) {
     const map = useMap();
     const canvasRef = useRef<HTMLCanvasElement>();
     const ptsRef = useRef<AcData[]>([]);
     const drawRef = useRef<() => void>();
+    const navRef   = useRef<NavPoint[]>([]);
     useEffect(() => {
         ptsRef.current = points;
         if (drawRef.current) {
             drawRef.current();
         }
     }, [points]);
+    useEffect(() => {
+        navRef.current = navPoints;
+        drawRef.current?.();
+    }, [navPoints]);
 
     useEffect(() => {
         // 1) Create & append a full-screen canvas in the overlay pane
@@ -54,7 +65,8 @@ export function CanvasOverlay({ points }: { points: AcData[] }) {
             const zoom    = map.getZoom();
             const basePx  = 5;
             const scale   = Math.pow(2, zoom / 4);
-            const perp   = Math.PI / 2;
+            const navPx     = 1;
+            const sqrt3     = Math.sqrt(3);
 
             for (const pt of ptsRef.current) {
                 // compute pixel coords relative to the NW corner
@@ -79,17 +91,44 @@ export function CanvasOverlay({ points }: { points: AcData[] }) {
                 ctx.stroke();
 
                 ctx.restore();
-
-                // draw label top-left of arrow origin
+                const lines = [
+                    pt.id,
+                    `HDG:${Math.round(pt.trk)}`,
+                    `SPD:${Math.round(0)}`,
+                    `ALT:${Math.round(pt.alt)}`,
+                ];
                 ctx.font          = '12px sans-serif';
                 ctx.textAlign     = 'left';
-                ctx.textBaseline  = 'bottom';
+                ctx.textBaseline  = 'top';      // so we can stack downward
                 ctx.fillStyle     = 'black';
-                ctx.fillText(
-                    pt.id,
-                    origin.x - sizePx * 0.5,
-                    origin.y - sizePx * 0.2
-                );
+
+                // compute starting text position just NW of arrow base
+                const textX = origin.x - sizePx * 0.5;
+                const textY = origin.y + sizePx * 0.6; // slightly below arrow
+
+                // draw each line
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, textX, textY + i * 14);
+                });
+                // draw label top-left of arrow origin
+            }
+
+            for (const np of navRef.current) {
+                const origin = map.latLngToLayerPoint([np.lat, np.lon])
+                    .subtract(topLeft);
+
+                const size   = navPx * scale;
+                const height = size * (sqrt3 / 2);
+                ctx.beginPath();
+                ctx.moveTo(origin.x, origin.y - height);
+                ctx.lineTo(origin.x - size / 2, origin.y + height / 2);
+                ctx.lineTo(origin.x + size / 2, origin.y + height / 2);
+                ctx.closePath();
+                ctx.fillStyle   = 'green';
+                ctx.strokeStyle = 'darkgreen';
+                ctx.lineWidth   = 1;
+                ctx.fill();
+                ctx.stroke();
             }
         };
         drawRef.current = draw;
