@@ -2,27 +2,17 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
+import {AcData} from "./interfaces/acdata.tsx";
+import {NavPoint} from "./interfaces/navpoint.tsx";
 
-interface AcData {
-    id:        string;
-    lat:       number;
-    lon:       number;
-    alt:       number;
-    trk:       number;  // degrees, 0 = north/up
-}
-interface NavPoint {
-    id:   string;
-    lat:  number;
-    lon:  number;
-    name: string;
-}
-
-export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoints: NavPoint[]; }) {
+type LatLon = [number, number];
+export function CanvasOverlay({ points, navPoints, runways = [] }: { points: AcData[], navPoints: NavPoint[], runways?: LatLon[][]; }) {
     const map = useMap();
     const canvasRef = useRef<HTMLCanvasElement>();
     const ptsRef = useRef<AcData[]>([]);
     const drawRef = useRef<() => void>();
     const navRef   = useRef<NavPoint[]>([]);
+    const runRef    = useRef<LatLon[][]>(runways);
     useEffect(() => {
         ptsRef.current = points;
         if (drawRef.current) {
@@ -33,6 +23,10 @@ export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoin
         navRef.current = navPoints;
         drawRef.current?.();
     }, [navPoints]);
+    useEffect(() => {
+        runRef.current = runways;
+        drawRef.current?.();
+    }, [runways]);
 
     useEffect(() => {
         // 1) Create & append a full-screen canvas in the overlay pane
@@ -67,7 +61,37 @@ export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoin
             const scale   = Math.pow(2, zoom / 4);
             const navPx     = 1;
             const sqrt3     = Math.sqrt(3);
+            runRef.current.forEach((corners) => {
+                if (corners.length < 2) return;
+                const pts = corners.map(([lat, lon]) => map.latLngToLayerPoint([lat, lon]).subtract(topLeft));
+                ctx.save();
+                ctx.beginPath();
+                pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+                ctx.closePath();
+                ctx.fillStyle   = "#666";
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth   = 2;
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+            for (const np of navRef.current) {
+                const origin = map.latLngToLayerPoint([np.lat, np.lon])
+                    .subtract(topLeft);
 
+                const size   = navPx * scale;
+                const height = size * (sqrt3 / 2);
+                ctx.beginPath();
+                ctx.moveTo(origin.x, origin.y - height);
+                ctx.lineTo(origin.x - size / 2, origin.y + height / 2);
+                ctx.lineTo(origin.x + size / 2, origin.y + height / 2);
+                ctx.closePath();
+                ctx.fillStyle   = 'green';
+                ctx.strokeStyle = 'darkgreen';
+                ctx.lineWidth   = 1;
+                ctx.fill();
+                ctx.stroke();
+            }
             for (const pt of ptsRef.current) {
                 // compute pixel coords relative to the NW corner
                 const origin = map.latLngToLayerPoint([pt.lat, pt.lon])
@@ -94,7 +118,7 @@ export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoin
                 const lines = [
                     pt.id,
                     `HDG:${Math.round(pt.trk)}`,
-                    `SPD:${Math.round(0)}`,
+                    `SPD:${Math.round(pt.spd)}`,
                     `ALT:${Math.round(pt.alt)}`,
                 ];
                 ctx.font          = '12px sans-serif';
@@ -113,23 +137,10 @@ export function CanvasOverlay({ points, navPoints }: { points: AcData[], navPoin
                 // draw label top-left of arrow origin
             }
 
-            for (const np of navRef.current) {
-                const origin = map.latLngToLayerPoint([np.lat, np.lon])
-                    .subtract(topLeft);
 
-                const size   = navPx * scale;
-                const height = size * (sqrt3 / 2);
-                ctx.beginPath();
-                ctx.moveTo(origin.x, origin.y - height);
-                ctx.lineTo(origin.x - size / 2, origin.y + height / 2);
-                ctx.lineTo(origin.x + size / 2, origin.y + height / 2);
-                ctx.closePath();
-                ctx.fillStyle   = 'green';
-                ctx.strokeStyle = 'darkgreen';
-                ctx.lineWidth   = 1;
-                ctx.fill();
-                ctx.stroke();
-            }
+
+
+
         };
         drawRef.current = draw;
 

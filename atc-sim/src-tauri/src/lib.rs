@@ -48,7 +48,8 @@ struct AcData {
     lat: serde_json::Value,
     lon: serde_json::Value,
     alt: serde_json::Value,
-    trk: serde_json::Value
+    trk: serde_json::Value,
+    spd: serde_json::Value,
 }
 #[derive(Debug, Serialize)]
 struct NavPoint {
@@ -144,6 +145,32 @@ async fn set_heading(id: &str, heading: &str, sim: State<'_, SimSender>) -> Resu
     }).to_string();
     sim.0.lock().await.send(cmd).map_err(|e| format!("send error: {}", e))
 }
+#[tauri::command]
+async fn set_speed(id: &str, speed: &str, sim: State<'_, SimSender>) -> Result<(), String> {
+    log::info!("User SET_SPEED → id={} spd={}", id, speed);
+    let cmd = json!({
+        "command": format!("SPD {} {}", id, speed),
+    }).to_string();
+    sim.0.lock().await.send(cmd).map_err(|e| format!("send error: {}", e))
+}
+#[tauri::command]
+async fn set_vspeed(id: &str, vspeed: &str, sim: State<'_, SimSender>) -> Result<(), String> {
+    log::info!("User SET_VSPEED → id={} spd={}", id, vspeed);
+    let cmd = json!({
+        "command": format!("VS {} {}", id, vspeed),
+    }).to_string();
+    sim.0.lock().await.send(cmd).map_err(|e| format!("send error: {}", e))
+}
+#[tauri::command]
+async fn assume_control(id: &str) -> Result<(), String> {
+    log::info!("User ASSUME_CONTROL → id={}", id);
+    Ok(())
+}
+#[tauri::command]
+async fn relinquish_control(id: &str) -> Result<(), String> {
+    log::info!("User RELINQUISH_CONTROL → id={}", id);
+    Ok(())
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -154,7 +181,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(sim_sender)
-        .invoke_handler(tauri::generate_handler![greet, set_altitude, set_heading, get_nav_points])
+        .invoke_handler(tauri::generate_handler![greet, set_altitude, set_heading, get_nav_points, set_speed, set_vspeed, assume_control, relinquish_control])
         .setup(|app| {
             // Grab a handle to the main window
             let window = app.get_webview_window("main").unwrap();

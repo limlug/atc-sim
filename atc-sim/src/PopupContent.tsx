@@ -1,14 +1,7 @@
 // PopupContent.tsx
 import React, { useState } from 'react';
 import { invoke } from "@tauri-apps/api/core";
-
-interface AcData {
-    id:  string;
-    lat: number;
-    lon: number;
-    alt: number;
-    trk: number;
-}
+import {AcData} from "./interfaces/acdata.tsx";
 
 interface PopupContentProps {
     selected: AcData;
@@ -84,7 +77,7 @@ export function PopupContent({ selected }: PopupContentProps) {
                     <select
                         disabled={!hasControl}
                         value={altitude}
-                        onChange={(e) => setAltitude(e.target.value)}
+                        onChange={(e) => {setAltitude(e.target.value); invoke('set_altitude', {id: selected.id, altitude: e.target.value});}}
                         style={selectStyle}
                     >
                         <option value="">Value</option>
@@ -98,7 +91,7 @@ export function PopupContent({ selected }: PopupContentProps) {
                     <select
                         disabled={!hasControl}
                         value={heading}
-                        onChange={(e) => setHeading(e.target.value)}
+                        onChange={(e) => {setHeading(e.target.value); invoke('set_heading', {id: selected.id, heading: e.target.value});}}
                         style={selectStyle}
                     >
                         <option value="">Value</option>
@@ -112,7 +105,7 @@ export function PopupContent({ selected }: PopupContentProps) {
                     <select
                         disabled={!hasControl}
                         value={speed}
-                        onChange={(e) => setSpeed(e.target.value)}
+                        onChange={(e) => {setSpeed(e.target.value); invoke('set_speed', {id: selected.id, speed: e.target.value});}}
                         style={selectStyle}
                     >
                         <option value="">Value</option>
@@ -126,7 +119,7 @@ export function PopupContent({ selected }: PopupContentProps) {
                     <select
                         disabled={!hasControl}
                         value={vsp}
-                        onChange={(e) => setVsp(e.target.value)}
+                        onChange={(e) => {setVsp(e.target.value); invoke('set_vspeed', {id: selected.id, vspeed: e.target.value});}}
                         style={selectStyle}
                     >
                         <option value="">Value</option>

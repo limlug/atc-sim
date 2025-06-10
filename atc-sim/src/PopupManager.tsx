@@ -3,13 +3,8 @@ import L from 'leaflet';
 import { createRoot, Root } from 'react-dom/client';
 import { useEffect, useRef } from 'react';
 import { PopupContent } from './PopupContent';
-interface AcData {
-    id:  string;
-    lat: number;
-    lon: number;
-    alt: number;
-    trk: number;
-}
+import {AcData} from "./interfaces/acdata.tsx";
+
 // PopupContent: React component for dynamic UI inside Leaflet popup
 /*function PopupContent({ selected }: { selected: AcData }) {
     const [showHeading, setShowHeading] = useState(false);

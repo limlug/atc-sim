@@ -1,4 +1,4 @@
-import "./App.css";
+import "./css/App.css";
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, useMapEvent } from 'react-leaflet';
@@ -8,51 +8,35 @@ import L from 'leaflet';
 import { CanvasOverlay } from './CanvasOverlay';
 import {PopupManager} from "./PopupManager.tsx";
 import { invoke } from "@tauri-apps/api/core";
+import {AcData} from "./interfaces/acdata.tsx";
+import {NavPoint} from "./interfaces/navpoint.tsx";
 
-interface AcData {
-    id:   string;
-    lat:  number;
-    lon:  number;
-    alt:  number;
-    trk:  number;
-}
 
-interface NavPoint {
-    id:   string;
-    lat:  number;
-    lon:  number;
-    name: string;
-}
 function App() {
-  //const [greetMsg, setGreetMsg] = useState("");
-  //const [name, setName] = useState("");
   const [points, setPoints] = useState<AcData[]>([]);
   const [navPoints, setNavPoints] = useState<NavPoint[]>([]);
   const [lastCenter] = useState<[number, number]>([0, 0]);
   const [selected, setSelected] = useState<AcData | null>(null);
-  //async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  //  setGreetMsg(await invoke("greet", { name }));
-  //}
-    useEffect(() => {
-        (async () => {
-            try {
-                const np: NavPoint[] = await invoke('get_nav_points');
-                setNavPoints(np);
-            } catch (err) {
-                console.error('Failed to load nav points:', err);
-            }
-        })();
-        // listen for “acdata” events from Tauri
-        let unlisten: () => void;
-        (async () => {
-            unlisten = await listen<AcData[]>('acdata', event => {
-                    setPoints(event.payload);
-                });
-        })();
-        return () => {
-            unlisten?.();
-        };
+
+  useEffect(() => {
+    (async () => {
+        try {
+            const np: NavPoint[] = await invoke('get_nav_points');
+            setNavPoints(np);
+        } catch (err) {
+            console.error('Failed to load nav points:', err);
+        }
+    })();
+    // listen for “acdata” events from Tauri
+    let unlisten: () => void;
+    (async () => {
+        unlisten = await listen<AcData[]>('acdata', event => {
+                setPoints(event.payload);
+            });
+    })();
+    return () => {
+        unlisten?.();
+    };
     }, []);
 
 
@@ -107,22 +91,27 @@ function App() {
     }
 
     const center: LatLngExpression = lastCenter[0] === 0 && lastCenter[1] === 0
-        ? [53.4267, 6.2808]  // default view
+        ? [50.039060831, 8.555603027]  // default view
         : lastCenter;
 
 
     return (
         <MapContainer
             center={center}
-            zoom={13}
+            zoom={10}
             style={{ height: '100vh', width: '100%' }}
         >
 
             <TileLayer
                 attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a>'
-                url="https://tile.openstreetmap.de/{z}/{x}/{y}.png"
+                url="https://maptiles.p.rapidapi.com/en/map/v1/{z}/{x}/{y}.png"
             />
-            <CanvasOverlay points={points} navPoints={navPoints}/>
+            <CanvasOverlay points={points} navPoints={navPoints} runways={[
+                [[50.032624432, 8.534617424], [50.045151875, 8.586845398]],
+                [[50.027648379, 8.534231186], [50.040135777, 8.586330414]],
+                [[50.034071663, 8.525862694], [49.998636419, 8.526291847]],
+                [[50.037131380, 8.497066498], [50.045840858, 8.533630371]]
+            ]}/>
 
             <ClickHandler />
             <PopupManager selected={selected} />
